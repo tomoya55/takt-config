@@ -11,99 +11,116 @@ takt-config/
 │   └── personas/
 │       ├── planner.md         # Senior architect — plans phased milestones
 │       ├── coder.md           # Full-stack developer — implements features
-│       ├── reviewer.md        # Pragmatic reviewer — blocks on real issues only
-│       └── integrator.md      # Release engineer — PR creation, CI checks, merging
+│       └── reviewer.md        # Pragmatic reviewer — blocks on real issues only
 └── workflows/
-    └── phased-delivery.yaml   # Multi-phase delivery with per-phase PRs
+    └── phased-delivery.yaml   # Plan → implement → review loop
 ```
 
 ## Persona → Provider Mapping
+
+Configured in `~/.takt/config.yaml` under `persona_providers`:
 
 | Persona | Provider | Model | Role |
 |---------|----------|-------|------|
 | planner | Claude Code | opus | Planning and milestone definition |
 | coder | Cursor | composer-2-fast | Implementation and fixes |
-| reviewer | Codex | (default) | Code review (skips trivial findings) |
-| integrator | Claude Code | sonnet | PR creation, CI evaluation, merging |
+| reviewer | Codex | codex | Code review (skips trivial findings) |
+
+Workflows only reference personas by name — provider/model resolution is handled by `persona_providers`.
 
 ## Workflow Presets
 
 ### `phased-delivery`
 
-A multi-phase delivery workflow where each milestone becomes a separate PR.
+Plan → implement → review loop. PR creation is handled by takt's `auto_pr` feature, not by workflow steps.
 
 ```
-plan → implement → create-pr → evaluate → review → merge → [next phase or COMPLETE]
-                                  ↑          |
-                                  fix ←------┘
+plan (opus) → implement (composer-2-fast) → review (codex) → COMPLETE
+                                               ↓
+                                              fix (composer-2-fast) → review
 ```
 
 | Step | Persona | Edits | Description |
 |------|---------|-------|-------------|
 | plan | planner | no | Break requirements into ~500-line phases |
 | implement | coder | yes | Build the current phase on a feature branch |
-| create-pr | integrator | yes | Commit, push, and open a PR |
-| evaluate | integrator | no | Check CI status, PR size, code quality |
 | review | reviewer | no | Code review (BLOCKING/IMPORTANT only) |
-| fix | coder | yes | Address review findings, then re-evaluate |
-| merge | integrator | yes | Squash-merge, then loop to next phase or COMPLETE |
+| fix | coder | yes | Address review findings, then re-review |
 
-**Quality gates (evaluate step):**
+## Setup
 
-- CI: all checks must pass
-- PR size: <500 lines PASS, 500–999 WARNING, 1000+ BLOCKING
-- Quality: only BLOCKING and IMPORTANT issues are flagged
-
-## Usage in a New Project
-
-### 1. Initialize takt
+### 1. Install takt and clone this repo
 
 ```bash
 npm install -g takt
-cd your-project
-takt init
-```
-
-### 2. Clone this config repo (once per machine)
-
-```bash
 git clone git@github.com:tomoya55/takt-config.git ~/takt-config
 ```
 
-### 3. Link shared resources
+### 2. Link shared resources into `~/.takt/`
 
 ```bash
-# Link personas (shared across all presets)
-ln -s ~/takt-config/facets .takt/facets
-
-# Link a workflow preset
-ln -s ~/takt-config/workflows/phased-delivery.yaml .takt/workflows/phased-delivery.yaml
+ln -s ~/takt-config/facets ~/.takt/facets
+ln -s ~/takt-config/workflows ~/.takt/workflows
 ```
 
-### 4. Add your project-specific files
+This makes all personas and workflow presets available globally. No per-project symlinks needed.
+
+### 3. Configure `~/.takt/config.yaml`
+
+Add `persona_providers` to your global takt config:
+
+```yaml
+persona_providers:
+  planner:
+    provider: claude
+    model: opus
+  coder:
+    provider: cursor
+    model: composer-2-fast
+  reviewer:
+    provider: codex
+    model: codex
+```
+
+### 4. Disable GPG signing for takt worktrees
+
+takt runs agents in isolated worktrees under `~/Work/src/github.com/<user>/takt-worktrees/`. If your git config requires GPG/SSH signing via 1Password (or similar), agents will fail to commit because they can't access the signing UI.
+
+**Fix:** Use git's `includeIf` to disable signing only for takt worktrees.
+
+Create `~/.gitconfig-takt`:
+
+```ini
+[commit]
+	gpgsign = false
+```
+
+Append to `~/.gitconfig`:
+
+```ini
+[includeIf "gitdir:~/Work/src/github.com/<user>/takt-worktrees/"]
+	path = ~/.gitconfig-takt
+```
+
+This disables commit signing inside takt worktrees while keeping it enabled everywhere else.
+
+### 5. Per-project setup
+
+Only project-specific files go in `.takt/`:
 
 ```
 .takt/
-├── facets -> ~/takt-config/facets           # symlink
-├── workflows/
-│   └── phased-delivery.yaml -> ~/takt-config/...  # symlink
+├── tasks.yaml                           # task queue
 ├── tasks/
-│   └── your-prd.md                          # project-specific PRD
-└── config.yaml                              # project-specific overrides (optional)
+│   └── <slug>/
+│       └── order.md                     # PRD
+└── config.yaml                          # project overrides (optional)
 ```
 
-If you need to override the default provider/model for this project, create `.takt/config.yaml`:
-
-```yaml
-provider: claude
-model: sonnet
-language: ja
-```
-
-### 5. Run
+### 6. Run
 
 ```bash
-takt run --workflow phased-delivery --task tasks/your-prd.md
+takt run
 ```
 
 ## Adding a New Preset
@@ -118,8 +135,4 @@ git commit -m "feat: add quick-fix workflow preset"
 git push
 ```
 
-Then link it in any project:
-
-```bash
-ln -s ~/takt-config/workflows/quick-fix.yaml .takt/workflows/quick-fix.yaml
-```
+Available immediately via `~/.takt/workflows` symlink — no per-project linking needed.
