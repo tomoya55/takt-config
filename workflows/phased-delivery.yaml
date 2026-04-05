@@ -31,6 +31,7 @@ steps:
   - name: review
     persona: reviewer
     provider: codex
+    model: codex
     edit: false
     rules:
       - condition: Code review passed with no blocking issues
