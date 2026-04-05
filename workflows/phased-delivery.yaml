@@ -10,8 +10,6 @@ personas:
 steps:
   - name: plan
     persona: planner
-    provider: claude
-    model: opus
     edit: false
     rules:
       - condition: Planning is complete with numbered phases defined
@@ -19,8 +17,6 @@ steps:
 
   - name: implement
     persona: coder
-    provider: cursor
-    model: composer-2-fast
     edit: true
     rules:
       - condition: Current phase implementation is complete
@@ -30,8 +26,6 @@ steps:
 
   - name: review
     persona: reviewer
-    provider: codex
-    model: codex
     edit: false
     rules:
       - condition: Code review passed with no blocking issues
@@ -41,8 +35,6 @@ steps:
 
   - name: fix
     persona: coder
-    provider: cursor
-    model: composer-2-fast
     edit: true
     rules:
       - condition: All review findings are fixed
