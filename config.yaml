@@ -1,0 +1,15 @@
+provider: claude
+model: sonnet
+
+persona_providers:
+  planner:
+    provider: claude
+    model: opus
+  coder:
+    provider: cursor
+    model: composer-2-fast
+  reviewer:
+    provider: codex
+  integrator:
+    provider: claude
+    model: sonnet

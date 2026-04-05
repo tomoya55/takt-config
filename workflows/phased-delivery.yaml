@@ -1,0 +1,93 @@
+name: phased-delivery
+initial_step: plan
+max_steps: 50
+
+personas:
+  planner: ../facets/personas/planner.md
+  coder: ../facets/personas/coder.md
+  reviewer: ../facets/personas/reviewer.md
+  integrator: ../facets/personas/integrator.md
+
+steps:
+  # Phase 1: Plan all milestones upfront
+  - name: plan
+    persona: planner
+    provider: claude
+    model: opus
+    edit: false
+    rules:
+      - condition: Planning is complete with numbered phases defined
+        next: implement
+
+  # Phase 2: Implement current phase on a feature branch
+  - name: implement
+    persona: coder
+    provider: cursor
+    model: composer-2-fast
+    edit: true
+    rules:
+      - condition: Current phase implementation is complete
+        next: create-pr
+      - condition: Implementation cannot proceed
+        next: ABORT
+
+  # Phase 3: Create PR for the current phase
+  - name: create-pr
+    persona: integrator
+    provider: claude
+    model: sonnet
+    edit: true
+    rules:
+      - condition: PR is created and pushed successfully
+        next: evaluate
+      - condition: Failed to create PR
+        next: ABORT
+
+  # Phase 4: Evaluate CI, PR size, and quality
+  - name: evaluate
+    persona: integrator
+    provider: claude
+    model: sonnet
+    edit: false
+    rules:
+      - condition: CI passes, PR size acceptable, no blocking quality issues
+        next: review
+      - condition: CI fails or blocking quality issues found
+        next: fix
+
+  # Phase 5: Code review by Codex
+  - name: review
+    persona: reviewer
+    provider: codex
+    edit: false
+    rules:
+      - condition: Code review passed with no blocking issues
+        next: merge
+      - condition: There are blocking issues that need fixing
+        next: fix
+
+  # Phase 6: Fix issues from evaluate or review
+  - name: fix
+    persona: coder
+    provider: cursor
+    model: composer-2-fast
+    edit: true
+    rules:
+      - condition: All findings are fixed
+        next: evaluate
+      - condition: Cannot fix the issues
+        next: ABORT
+
+  # Phase 7: Merge PR and check if more phases remain
+  - name: merge
+    persona: integrator
+    provider: claude
+    model: sonnet
+    edit: true
+    rules:
+      - condition: PR merged and more phases remain
+        next: implement
+      - condition: PR merged and all phases are complete
+        next: COMPLETE
+      - condition: Merge failed
+        next: ABORT
