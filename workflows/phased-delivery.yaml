@@ -11,6 +11,7 @@ steps:
   - name: plan
     persona: planner
     edit: false
+    policy: delivery-standards
     rules:
       - condition: Planning is complete with numbered phases defined
         next: implement
@@ -18,6 +19,9 @@ steps:
   - name: implement
     persona: coder
     edit: true
+    policy:
+      - coding
+      - delivery-standards
     rules:
       - condition: Current phase implementation is complete
         next: review
@@ -27,6 +31,9 @@ steps:
   - name: review
     persona: reviewer
     edit: false
+    policy:
+      - review
+      - delivery-standards
     rules:
       - condition: Code review passed with no blocking issues
         next: COMPLETE
@@ -36,6 +43,9 @@ steps:
   - name: fix
     persona: coder
     edit: true
+    policy:
+      - coding
+      - delivery-standards
     rules:
       - condition: All review findings are fixed
         next: review

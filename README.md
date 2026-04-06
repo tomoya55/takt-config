@@ -8,10 +8,12 @@ Shared [takt](https://github.com/nrslib/takt) workflow presets and persona confi
 takt-config/
 ├── config.yaml               # Default provider/model and persona_providers
 ├── facets/
-│   └── personas/
-│       ├── planner.md         # Senior architect — plans phased milestones
-│       ├── coder.md           # Full-stack developer — implements features
-│       └── reviewer.md        # Pragmatic reviewer — blocks on real issues only
+│   ├── personas/
+│   │   ├── planner.md         # Senior architect — plans phased milestones
+│   │   ├── coder.md           # Full-stack developer — implements features
+│   │   └── reviewer.md        # Pragmatic reviewer — blocks on real issues only
+│   └── policies/
+│       └── delivery-standards.md  # CI/CD first, PR sizing, merge-readiness
 └── workflows/
     └── phased-delivery.yaml   # Plan → implement → review loop
 ```
@@ -40,12 +42,22 @@ plan (opus) → implement (composer-2-fast) → review (codex) → COMPLETE
                                               fix (composer-2-fast) → review
 ```
 
-| Step | Persona | Edits | Description |
-|------|---------|-------|-------------|
-| plan | planner | no | Break requirements into ~500-line phases |
-| implement | coder | yes | Build the current phase on a feature branch |
-| review | reviewer | no | Code review (BLOCKING/IMPORTANT only) |
-| fix | coder | yes | Address review findings, then re-review |
+| Step | Persona | Edits | Policy | Description |
+|------|---------|-------|--------|-------------|
+| plan | planner | no | delivery-standards | Break requirements into ~500-line phases (Phase 0 = CI/CD) |
+| implement | coder | yes | coding, delivery-standards | Build the current phase on a feature branch |
+| review | reviewer | no | review, delivery-standards | Code review (BLOCKING/IMPORTANT only) |
+| fix | coder | yes | coding, delivery-standards | Address review findings, then re-review |
+
+### Delivery Standards Policy
+
+Applied to all steps. Key rules:
+
+- **Phase 0 = CI/CD setup** — GitHub Actions (lint + test) before any implementation
+- **~500 lines per PR** — exceeding this is a planning defect
+- **Independent phases** — each phase leaves the codebase in a working state
+- **No draft PRs** — PRs are created ready-for-review
+- **Tests required** — every phase includes tests for its code
 
 ## Setup
 
